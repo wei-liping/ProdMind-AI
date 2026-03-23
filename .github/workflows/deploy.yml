@@ -39,5 +39,20 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
+      # region agent log
+      - name: Diagnose GitHub Pages API
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          API_URL="https://api.github.com/repos/${GITHUB_REPOSITORY}/pages"
+          HTTP_STATUS=$(curl -sS -o pages.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "${API_URL}" || true)
+          export HTTP_STATUS
+          node -e "const fs=require('fs');let body='';try{body=fs.readFileSync('pages.json','utf8').slice(0,500)}catch{};fetch('http://127.0.0.1:7310/ingest/ee962dc1-1864-46e1-9abd-5124c4d11486',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2b1161'},body:JSON.stringify({sessionId:'2b1161',runId:process.env.GITHUB_RUN_ID,hypothesisId:'H1,H2',location:'deploy.yml:deploy:Diagnose GitHub Pages API',message:'pages api response before deploy',data:{repository:process.env.GITHUB_REPOSITORY,httpStatus:process.env.HTTP_STATUS,bodyPreview:body},timestamp:Date.now()})}).catch(()=>{});"
+        shell: bash
+      # endregion
       - id: deployment
         uses: actions/deploy-pages@v4
