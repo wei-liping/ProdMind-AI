@@ -219,29 +219,42 @@ export function exportMarkdown(project: Project, steps: Step[]) {
 
 export async function exportPDF(project: Project, steps: Step[]) {
   const md = generateMarkdown(project, steps);
-
   const html = markdownToSimpleHTML(md);
 
   const container = document.createElement("div");
   container.innerHTML = html;
   container.style.cssText =
-    "font-family:system-ui,-apple-system,sans-serif;font-size:14px;line-height:1.8;color:#1a1a1a;padding:40px;max-width:800px;";
+    "font-family:system-ui,-apple-system,sans-serif;font-size:14px;line-height:1.8;color:#1a1a1a;padding:40px;max-width:800px;background:#ffffff;";
   document.body.appendChild(container);
 
   const { default: html2pdf } = await import("html2pdf.js");
   const safeName = project.name.replace(/[^\w\u4e00-\u9fff-]/g, "_");
 
-  await html2pdf()
-    .set({
-      margin: [10, 15],
-      filename: `${safeName}.pdf`,
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-    })
-    .from(container)
-    .save();
-
-  document.body.removeChild(container);
+  try {
+    await html2pdf()
+      .set({
+        margin: [10, 15],
+        filename: `${safeName}.pdf`,
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          onclone: (clonedDoc: Document) => {
+            clonedDoc
+              .querySelectorAll('style, link[rel="stylesheet"]')
+              .forEach((el) => el.remove());
+            clonedDoc.documentElement.style.cssText =
+              "background:#ffffff;color:#1a1a1a;";
+            clonedDoc.body.style.cssText =
+              "background:#ffffff;color:#1a1a1a;margin:0;";
+          },
+        },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      })
+      .from(container)
+      .save();
+  } finally {
+    document.body.removeChild(container);
+  }
 }
 
 function markdownToSimpleHTML(md: string): string {

@@ -1,0 +1,3 @@
+{"sessionId":"2b1161","location":"export.ts:exportPDF:entry","message":"exportPDF called","data":{"projectName":"新想法项目","steps":["insights"]},"timestamp":1774257172602}
+{"sessionId":"2b1161","location":"export.ts:exportPDF:beforeSave","message":"calling html2pdf save (onclone strip)","data":{"safeName":"新想法项目"},"timestamp":1774257172628}
+{"sessionId":"2b1161","location":"export.ts:exportPDF:saveComplete","message":"html2pdf save completed OK","data":{},"timestamp":1774257172936}
