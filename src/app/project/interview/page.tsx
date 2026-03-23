@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useProjectStore } from "@/store/project-store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,9 +11,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ArrowLeft, Send, Loader2, User, Bot } from "lucide-react";
 import type { Persona, ChatMessage } from "@/lib/types";
 import { useSettingsStore } from "@/store/settings-store";
+import { streamInterview } from "@/lib/ai/client";
 
 export default function InterviewPage() {
-  const params = useParams();
   const router = useRouter();
   const projects = useProjectStore((s) => s.projects);
   const currentProjectId = useProjectStore((s) => s.currentProjectId);
@@ -74,23 +74,6 @@ export default function InterviewPage() {
         content: m.content,
       }));
 
-      const res = await fetch("/api/interview", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: apiMessages,
-          persona: selectedPersona,
-          apiKey: api.apiKey,
-          baseUrl: api.baseUrl,
-          modelId: api.modelId,
-        }),
-      });
-
-      if (!res.ok) throw new Error("请求失败");
-
-      const reader = res.body?.getReader();
-      const decoder = new TextDecoder();
-      let assistantContent = "";
       const assistantId = crypto.randomUUID();
 
       addInterviewMessage({
@@ -100,26 +83,20 @@ export default function InterviewPage() {
         timestamp: Date.now(),
       });
 
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value);
-          assistantContent += chunk;
-          updateInterview({
-            messages: [
-              ...messages,
-              userMsg,
-              {
-                id: assistantId,
-                role: "assistant",
-                content: assistantContent,
-                timestamp: Date.now(),
-              },
-            ],
-          });
-        }
-      }
+      await streamInterview(api, selectedPersona, apiMessages, (text) => {
+        updateInterview({
+          messages: [
+            ...messages,
+            userMsg,
+            {
+              id: assistantId,
+              role: "assistant",
+              content: text,
+              timestamp: Date.now(),
+            },
+          ],
+        });
+      });
     } catch {
       // handled silently
     } finally {
@@ -129,7 +106,7 @@ export default function InterviewPage() {
 
   function handleBack() {
     goToStep("priorities");
-    router.push(`/project/${params.id}/priorities`);
+    router.push("/project/priorities");
   }
 
   if (!selectedPersona) {

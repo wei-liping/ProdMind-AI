@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useProjectStore } from "@/store/project-store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useSettingsStore } from "@/store/settings-store";
+import { generateRICE } from "@/lib/ai/client";
 import {
   ScatterChart,
   Scatter,
@@ -65,7 +66,6 @@ function ChartTooltip({ active, payload }: CustomTooltipProps) {
 }
 
 export default function PrioritiesPage() {
-  const params = useParams();
   const router = useRouter();
   const projects = useProjectStore((s) => s.projects);
   const currentProjectId = useProjectStore((s) => s.currentProjectId);
@@ -86,20 +86,7 @@ export default function PrioritiesPage() {
   async function handleGenerate() {
     setLoading(true);
     try {
-      const res = await fetch("/api/priorities", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          features: project!.prd.features,
-          apiKey: api.apiKey,
-          baseUrl: api.baseUrl,
-          modelId: api.modelId,
-        }),
-      });
-
-      if (!res.ok) throw new Error("评分失败");
-
-      const data = await res.json();
+      const data = await generateRICE(api, project!.prd.features);
       updatePriorities({
         rankings: data.rankings.sort(
           (a: { score: number }, b: { score: number }) => b.score - a.score,
@@ -140,12 +127,12 @@ export default function PrioritiesPage() {
 
   function handleBack() {
     goToStep("prd");
-    router.push(`/project/${params.id}/prd`);
+    router.push("/project/prd");
   }
 
   function handleNext() {
     goToStep("interview");
-    router.push(`/project/${params.id}/interview`);
+    router.push("/project/interview");
   }
 
   return (

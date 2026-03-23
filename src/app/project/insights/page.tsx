@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useProjectStore } from "@/store/project-store";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,6 +18,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useSettingsStore } from "@/store/settings-store";
+import { analyzeInsights, generateProjectName } from "@/lib/ai/client";
 
 const severityColors = {
   high: "bg-red-100 text-red-700 border-red-200",
@@ -28,7 +29,6 @@ const severityColors = {
 const severityLabels = { high: "严重", medium: "中等", low: "轻微" };
 
 export default function InsightsPage() {
-  const params = useParams();
   const router = useRouter();
   const projects = useProjectStore((s) => s.projects);
   const currentProjectId = useProjectStore((s) => s.currentProjectId);
@@ -55,21 +55,11 @@ export default function InsightsPage() {
     updateInsights({ rawInput: input });
 
     try {
-      const res = await fetch("/api/insights", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          input,
-          inputType: project!.insights.inputType,
-          apiKey: api.apiKey,
-          baseUrl: api.baseUrl,
-          modelId: api.modelId,
-        }),
-      });
-
-      if (!res.ok) throw new Error("分析失败，请检查 API 配置");
-
-      const data = await res.json();
+      const data = await analyzeInsights(
+        api,
+        input,
+        project!.insights.inputType,
+      );
       updateInsights({
         painPoints: data.painPoints,
         sentimentSummary: data.sentimentSummary,
@@ -77,19 +67,9 @@ export default function InsightsPage() {
       });
 
       if (project!.name === "新想法项目" || project!.name === "用户反馈分析") {
-        fetch("/api/generate-name", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            input,
-            apiKey: api.apiKey,
-            baseUrl: api.baseUrl,
-            modelId: api.modelId,
-          }),
-        })
-          .then((r) => r.json())
-          .then((d) => {
-            if (d.name) renameProject(project!.id, d.name);
+        generateProjectName(api, input)
+          .then((name) => {
+            if (name) renameProject(project!.id, name);
           })
           .catch(() => {});
       }
@@ -102,7 +82,7 @@ export default function InsightsPage() {
 
   function handleNext() {
     goToStep("prd");
-    router.push(`/project/${params.id}/prd`);
+    router.push("/project/prd");
   }
 
   const sentiment = project.insights.sentimentSummary;

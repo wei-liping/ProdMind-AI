@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useProjectStore } from "@/store/project-store";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,9 +29,9 @@ import {
 } from "lucide-react";
 import type { Feature } from "@/lib/types";
 import { useSettingsStore } from "@/store/settings-store";
+import { generatePRD, generatePRDDoc } from "@/lib/ai/client";
 
 export default function PRDPage() {
-  const params = useParams();
   const router = useRouter();
   const projects = useProjectStore((s) => s.projects);
   const currentProjectId = useProjectStore((s) => s.currentProjectId);
@@ -57,22 +57,12 @@ export default function PRDPage() {
   async function handleGenerate() {
     setLoading(true);
     try {
-      const res = await fetch("/api/prd", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          painPoints: project!.insights.painPoints,
-          highFreqNeeds: project!.insights.highFreqNeeds,
-          rawInput: project!.insights.rawInput,
-          apiKey: api.apiKey,
-          baseUrl: api.baseUrl,
-          modelId: api.modelId,
-        }),
-      });
-
-      if (!res.ok) throw new Error("生成失败");
-
-      const data = await res.json();
+      const data = await generatePRD(
+        api,
+        project!.insights.painPoints,
+        project!.insights.highFreqNeeds,
+        project!.insights.rawInput,
+      );
       updatePRD({
         userPersonas: data.userPersonas,
         scenarios: data.scenarios,
@@ -92,35 +82,14 @@ export default function PRDPage() {
   async function handleGenerateDoc() {
     setDocLoading(true);
     try {
-      const res = await fetch("/api/prd-doc", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          personas: project!.prd.userPersonas,
-          scenarios: project!.prd.scenarios,
-          features: project!.prd.features,
-          rawInput: project!.insights.rawInput,
-          apiKey: api.apiKey,
-          baseUrl: api.baseUrl,
-          modelId: api.modelId,
-        }),
-      });
-
-      if (!res.ok) throw new Error("生成失败");
-
-      const reader = res.body?.getReader();
-      const decoder = new TextDecoder();
-      let doc = "";
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value);
-          doc += chunk;
-          updatePRD({ fullDocument: doc });
-        }
-      }
+      await generatePRDDoc(
+        api,
+        project!.prd.userPersonas,
+        project!.prd.scenarios,
+        project!.prd.features,
+        project!.insights.rawInput,
+        (text) => updatePRD({ fullDocument: text }),
+      );
       setActiveTab("document");
     } catch {
       // error handled silently
@@ -145,12 +114,12 @@ export default function PRDPage() {
 
   function handleBack() {
     goToStep("insights");
-    router.push(`/project/${params.id}/insights`);
+    router.push("/project/insights");
   }
 
   function handleNext() {
     goToStep("priorities");
-    router.push(`/project/${params.id}/priorities`);
+    router.push("/project/priorities");
   }
 
   return (

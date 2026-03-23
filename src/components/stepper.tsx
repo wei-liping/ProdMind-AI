@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { STEPS, STEP_ORDER, type Step } from "@/lib/types";
 import { useProjectStore } from "@/store/project-store";
@@ -21,6 +22,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 };
 
 export function Stepper() {
+  const router = useRouter();
   const projects = useProjectStore((s) => s.projects);
   const currentProjectId = useProjectStore((s) => s.currentProjectId);
   const goToStep = useProjectStore((s) => s.goToStep);
@@ -78,7 +80,11 @@ export function Stepper() {
               className={cn("flex items-center", !isLast && "flex-1")}
             >
               <button
-                onClick={() => isAccessible && goToStep(step.key)}
+                onClick={() => {
+                  if (!isAccessible) return;
+                  goToStep(step.key);
+                  router.push(`/project/${step.key}`);
+                }}
                 disabled={!isAccessible}
                 className={cn(
                   "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all",

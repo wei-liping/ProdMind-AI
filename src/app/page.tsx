@@ -41,15 +41,15 @@ export default function HomePage() {
 
   function handleCreate(type: "idea" | "reviews") {
     const name = type === "idea" ? "新想法项目" : "用户反馈分析";
-    const id = createProject(name, type);
-    router.push(`/project/${id}/insights`);
+    createProject(name, type);
+    router.push("/project/insights");
   }
 
   function handleResume(id: string) {
     setCurrentProject(id);
     const project = projects.find((p) => p.id === id);
     if (project) {
-      router.push(`/project/${id}/${project.currentStep}`);
+      router.push(`/project/${project.currentStep}`);
     }
   }
 

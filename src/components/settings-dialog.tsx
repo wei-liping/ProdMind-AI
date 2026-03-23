@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Settings, Eye, EyeOff, CheckCircle2, AlertCircle } from "lucide-react";
+import { testConnection } from "@/lib/ai/client";
 
 export function SettingsDialog() {
   const api = useSettingsStore((s) => s.api);
@@ -29,12 +30,8 @@ export function SettingsDialog() {
     setTesting(true);
     setTestResult(null);
     try {
-      const res = await fetch("/api/test-connection", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(api),
-      });
-      setTestResult(res.ok ? "ok" : "fail");
+      const ok = await testConnection(api);
+      setTestResult(ok ? "ok" : "fail");
     } catch {
       setTestResult("fail");
     } finally {

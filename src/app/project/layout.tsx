@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useMemo, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useProjectStore } from "@/store/project-store";
 import { Stepper } from "@/components/stepper";
 import { ContextBanner } from "@/components/context-banner";
@@ -18,9 +18,7 @@ export default function ProjectLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const params = useParams();
   const router = useRouter();
-  const setCurrentProject = useProjectStore((s) => s.setCurrentProject);
   const renameProject = useProjectStore((s) => s.renameProject);
   const projects = useProjectStore((s) => s.projects);
   const currentProjectId = useProjectStore((s) => s.currentProjectId);
@@ -33,12 +31,6 @@ export default function ProjectLayout({
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (params.id && typeof params.id === "string") {
-      setCurrentProject(params.id);
-    }
-  }, [params.id, setCurrentProject]);
 
   if (!project) {
     return (
